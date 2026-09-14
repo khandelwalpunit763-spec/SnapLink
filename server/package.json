@@ -1,0 +1,16 @@
+{
+  "name": "snaplink-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SnapLink self-hosted download API (yt-dlp + ffmpeg). Run on a VPS/Railway/Fly and point DOWNLOADER_API_URL at it.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
