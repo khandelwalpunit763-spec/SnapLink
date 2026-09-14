@@ -1,5 +1,5 @@
 export type Platform = 'youtube' | 'instagram' | 'facebook' | 'twitter';
-export type Provider = 'self-api' | 'rapidapi' | 'demo';
+export type Provider = 'self-api' | 'rapidapi' | 'cobalt' | 'demo';
 
 export interface VideoFormat {
   id: string;

@@ -5,6 +5,7 @@ import type { DownloadResponse } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 const MAX_URL_LENGTH = 2048;
 
