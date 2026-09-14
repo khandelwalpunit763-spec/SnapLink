@@ -2,35 +2,48 @@
 import type { Platform, VideoData } from '../types';
 
 export async function extractWithCobalt(url: string, platform: Platform): Promise<VideoData> {
-  const res = await fetch('https://api.cobalt.tools/api/json', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      url: url,
-      videoQuality: '720',
-    }),
-  });
+  const servers = [
+    'https://api.cobalt.tools/api/json',
+    'https://cobalt-api.kwiatek.xyz/api/json',
+  ];
 
-  if (!res.ok) {
-    throw new Error(`Cobalt returned status ${res.status}`);
+  let data = null;
+
+  for (const serverUrl of servers) {
+    try {
+      const res = await fetch(serverUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: url,
+          videoQuality: '720',
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.status !== 'error') {
+          data = json;
+          break;
+        }
+      }
+    } catch (e) {
+      console.log('Server failed, trying next...');
+    }
   }
 
-  const data = await res.json();
-
-  if (data.status === 'error') {
-    throw new Error(data.error?.code || 'Cobalt extraction failed');
+  if (!data) {
+    throw new Error('Cobalt extraction failed');
   }
 
-  const downloadUrl = data.url;
+  const mainUrl = data.url || data.picker?.[0]?.url;
 
-  if (!downloadUrl && (!data.picker || data.picker.length === 0)) {
-    throw new Error('No download link found from Cobalt');
+  if (!mainUrl) {
+    throw new Error('No download link found');
   }
-
-  const mainUrl = downloadUrl || data.picker?.[0]?.url;
 
   return {
     id: 'cobalt-' + Date.now(),
