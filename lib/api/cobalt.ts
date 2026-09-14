@@ -2,48 +2,50 @@
 import type { Platform, VideoData } from '../types';
 
 export async function extractWithCobalt(url: string, platform: Platform): Promise<VideoData> {
-  const servers = [
-    'https://api.cobalt.tools/api/json',
-    'https://cobalt-api.kwiatek.xyz/api/json',
-  ];
-
-  let data = null;
-
-  for (const serverUrl of servers) {
-    try {
-      const res = await fetch(serverUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: url,
-          videoQuality: '720',
-        }),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.status !== 'error') {
-          data = json;
-          break;
+  // 1. Try VKR Free Multi-Downloader API (Bypasses YouTube Vercel IP block)
+  try {
+    const vkrRes = await fetch(`https://api.vkrdown.com/v2/?url=${encodeURIComponent(url)}`);
+    if (vkrRes.ok) {
+      const vkrData = await vkrRes.json();
+      if (vkrData && vkrData.data) {
+        const downloads = vkrData.data.downloads || [];
+        if (downloads.length > 0) {
+          return {
+            id: 'vkr-' + Date.now(),
+            title: vkrData.data.title || `${platform.toUpperCase()} Video`,
+            platform: platform,
+            url: url,
+            thumbnail: vkrData.data.thumbnail || '',
+            formats: downloads.map((d: any, index: number) => ({
+              quality: d.quality || d.format || `Download ${index + 1}`,
+              url: d.url,
+              ext: d.extension || 'mp4',
+              formatId: `fmt-${index}`,
+              needProxy: false,
+            })),
+          } as unknown as VideoData;
         }
       }
-    } catch (e) {
-      console.log('Server failed, trying next...');
     }
+  } catch (e) {
+    console.log('VKR API failed, trying Cobalt...');
   }
 
-  if (!data) {
-    throw new Error('Cobalt extraction failed');
-  }
+  // 2. Backup Cobalt API
+  const res = await fetch('https://api.cobalt.tools/api/json', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url: url, videoQuality: '720' }),
+  });
 
+  if (!res.ok) throw new Error('Download failed');
+  const data = await res.json();
   const mainUrl = data.url || data.picker?.[0]?.url;
 
-  if (!mainUrl) {
-    throw new Error('No download link found');
-  }
+  if (!mainUrl) throw new Error('No download link found');
 
   return {
     id: 'cobalt-' + Date.now(),
@@ -52,20 +54,8 @@ export async function extractWithCobalt(url: string, platform: Platform): Promis
     url: url,
     thumbnail: data.picker?.[0]?.thumb || '',
     formats: [
-      {
-        quality: '720p HD',
-        url: mainUrl,
-        ext: 'mp4',
-        formatId: '720p',
-        needProxy: false,
-      },
-      {
-        quality: '480p SD',
-        url: mainUrl,
-        ext: 'mp4',
-        formatId: '480p',
-        needProxy: false,
-      }
+      { quality: '720p HD', url: mainUrl, ext: 'mp4', formatId: '720p', needProxy: false },
+      { quality: '480p SD', url: mainUrl, ext: 'mp4', formatId: '480p', needProxy: false }
     ],
   } as unknown as VideoData;
 }
