@@ -1,20 +1,21 @@
 import type { Platform, VideoData } from '../types';
-import { extractDemo } from './demo';
-import { extractWithRapidApi } from './rapidapi';
-import { extractWithSelfApi } from './selfapi';
 import { extractWithCobalt } from './cobalt';
 
 export async function extractVideo(url: string, platform: Platform): Promise<VideoData> {
-  // Direct Cobalt try karega pehle (Demo mode skip karke)
+  console.log(`[snaplink] Attempting real extraction for: ${url}`);
+  
   try {
+    // Direct Cobalt/VKR try karega
     const result = await extractWithCobalt(url, platform);
-    if (result && (result.title || result.formats.length > 0)) {
+    
+    if (result && result.formats && result.formats.length > 0) {
       return result;
     }
+    
+    throw new Error("No formats found");
   } catch (err) {
-    console.error(`[snaplink] Cobalt failed, fallback to demo:`, err instanceof Error ? err.message : err);
+    console.error(`[snaplink] Extraction failed:`, err);
+    // Agar fail hua toh error throw karega, Demo Mode nahi dikhayega
+    throw err; 
   }
-
-  // Backup fallback
-  return extractDemo(url, platform);
 }
